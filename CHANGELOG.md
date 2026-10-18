@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Rewrote the README for API users. It now covers the public endpoint URL; examples in curl, JavaScript and Python; a real sample response; and a reference for every field. Maintainer instructions moved to a "Running it yourself" section.
+
 ## [0.4.0] - 2026-10-17
 
 ### Added
