@@ -9,7 +9,8 @@
     "node": ">=18"
   },
   "scripts": {
-    "scrape": "node src/scrape.js",
-    "start": "node src/server.js"
+    "update-data": "node src/scrape.js",
+    "start": "node src/server.js",
+    "build": "rm -rf dist && cp -R public dist && cp data/products.json dist/"
   }
 }

@@ -4,7 +4,21 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [Unreleased]
 
+### Added
+
+- `GET /api/products` on the local server accepts `q`, `material` and `in_stock` filters.
+- The web app has a request bar that shows the API URL for the current filters. You can edit it and run your own request, copy it, or open the raw JSON. The results grid now renders the API response.
+- Cloudflare Pages hosting: `pnpm build` assembles the site in `dist/`, and a Pages Function serves the filtered `/api/products`.
+- A GitHub Action refreshes the catalog every night at 09:00 UTC (2 AM Pacific) and commits it.
+
 ### Changed
+
+- The web app is titled "iSANMATE API", with a subtitle saying it's community-maintained and not an official iSANMATE service.
+- `pnpm scrape` is now `pnpm update-data`.
+
+### Removed
+
+- The web app's **Update data** button and the `POST /api/update` endpoint, so visitors can't trigger scrapes. Run `pnpm update-data` instead.
 
 - Rewrote the README for API users. It now covers the public endpoint URL; examples in curl, JavaScript and Python; a real sample response; and a reference for every field. Maintainer instructions moved to a "Running it yourself" section.
 

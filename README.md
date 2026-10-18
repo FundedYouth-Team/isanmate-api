@@ -2,6 +2,8 @@
 
 A free, public inventory list of every 3D printing filament [iSANMATE](https://isanmate.store) stocks: prices, colors, materials, stock status, images and links. Built with iSANMATE's permission.
 
+This is a community-maintained project, not an official iSANMATE API.
+
 Each color of a filament is its own product. For example, "High Speed Rainbow PLA+ Filament" comes in 7 colors, so it appears as 7 products.
 
 ## Using the API
@@ -159,16 +161,43 @@ The store runs on Shopify, so the scraper reads Shopify's public storefront JSON
 It requires Node 18+ and pnpm, and has no dependencies.
 
 ```sh
-pnpm scrape   # refresh data/products.json from the live store
-pnpm start    # web app at http://localhost:3000 with an "Update data" button
+pnpm update-data   # refresh data/products.json from the live store and print what changed
+pnpm start         # preview the web app at http://localhost:3000
+pnpm build         # assemble the site in dist/ for Cloudflare Pages
 ```
 
-The web app shows every product with search, a material filter and an "In stock only" toggle. **Update data** re-scrapes the store, rewrites `data/products.json`, and lists what changed: new or removed products, price changes and stock changes. To publish an update, commit and push `data/products.json`.
+`pnpm update-data` prints a summary of new and removed products, price changes and stock changes. To publish an update, commit and push `data/products.json`. A nightly GitHub Action also does this (see [Hosting](#hosting)).
+
+The web app shows every product with search, a material filter and an "In stock only" toggle. It serves one endpoint:
 
 | Method | Path            | Description                                    |
 | ------ | --------------- | ---------------------------------------------- |
 | GET    | `/api/products` | The full catalog (same as `data/products.json`) |
-| POST   | `/api/update`   | Re-scrape, save, and return a change summary   |
+
+`/api/products` takes optional filters, both on the hosted site and in the local preview. The raw GitHub URL above doesn't, because it's a static file.
+
+| Parameter  | Description |
+| ---------- | ----------- |
+| `q`        | Text search over name, color, material, SKU and features |
+| `material` | Exact material, e.g. `PETG` (not case-sensitive) |
+| `in_stock` | `true` or `false` |
+
+For example, `/api/products?material=PETG&in_stock=true`. A filtered response has the same shape as the full catalog, plus `query` (the filters used) and `match_count`. Unknown parameters return a 400 error.
+
+The web app's filters call this endpoint, and the request bar above the results shows the exact URL. You can edit that URL and click **Run** to send your own request, **Copy** it, or open the raw JSON.
+
+### Hosting
+
+The public site runs on Cloudflare Pages, connected to this GitHub repo:
+
+| Pages setting          | Value        |
+| ---------------------- | ------------ |
+| Build command          | `pnpm build` |
+| Build output directory | `dist`       |
+
+`pnpm build` copies `public/` and `data/products.json` into `dist/`. The site serves the catalog at `/products.json`. [`functions/api/products.js`](functions/api/products.js) is a Pages Function that serves `/api/products` with the same filters as the local preview, using [`src/filter.js`](src/filter.js). Both endpoints allow cross-origin requests.
+
+Visitors can't trigger a scrape. [`.github/workflows/update-data.yml`](.github/workflows/update-data.yml) runs the scraper every day at 09:00 UTC (2 AM Pacific Daylight Time, 1 AM standard time) and commits `data/products.json`. The push makes Cloudflare Pages redeploy. To run it on demand, use **Run workflow** on the repo's Actions tab.
 
 ### Translations
 

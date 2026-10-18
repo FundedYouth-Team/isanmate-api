@@ -316,7 +316,7 @@ export async function updateCatalog({ log = () => {} } = {}) {
   return { catalog: next, changes: diffCatalogs(prev, next) };
 }
 
-// CLI: `pnpm scrape`
+// CLI: `pnpm update-data`
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const { catalog, changes } = await updateCatalog({ log: console.log });
   console.log(

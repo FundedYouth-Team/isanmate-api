@@ -1,0 +1,33 @@
+# Refreshes data/products.json from the store every night and commits it.
+# The push triggers a Cloudflare Pages deploy.
+name: Update data
+
+on:
+  schedule:
+    # 09:00 UTC = 2 AM Pacific Daylight Time (1 AM during standard time).
+    # GitHub may start scheduled runs some minutes late.
+    - cron: '0 9 * * *'
+  workflow_dispatch: # allows a manual run from the Actions tab
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node src/scrape.js
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898283+github-actions[bot]@users.noreply.github.com'
+          git add data/products.json
+          git commit -m 'Update catalog data' || exit 0
+          git push
