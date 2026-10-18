@@ -1,0 +1,15 @@
+{
+  "name": "isanmate-api",
+  "version": "0.4.0",
+  "description": "Public catalog API for the iSANMATE filament store, built from its Shopify storefront.",
+  "type": "module",
+  "private": true,
+  "packageManager": "pnpm@11.1.2",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "scrape": "node src/scrape.js",
+    "start": "node src/server.js"
+  }
+}

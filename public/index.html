@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iSANMATE Catalog</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #fff; --text: #1b1f24; --muted: #5f6b7a; --border: #e2e6eb;
+    --accent: #2563eb; --accent-text: #fff; --ok: #15803d; --warn: #b45309; --bad: #b91c1c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111418; --surface: #1a1f25; --text: #e7eaee; --muted: #9aa5b1; --border: #2b323a;
+      --accent: #3b82f6; --ok: #4ade80; --warn: #fbbf24; --bad: #f87171; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); }
+  header { position: sticky; top: 0; z-index: 1; background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 12px 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  h1 { font-size: 17px; margin: 0; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .spacer { flex: 1; }
+  input, select { font: inherit; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg); color: var(--text); }
+  input[type=search] { width: 240px; max-width: 100%; }
+  button { font: inherit; font-weight: 600; padding: 8px 16px; border: 0; border-radius: 6px;
+    background: var(--accent); color: var(--accent-text); cursor: pointer; }
+  button:disabled { opacity: .6; cursor: progress; }
+  main { padding: 16px; max-width: 1400px; margin: 0 auto; }
+  #status { margin-bottom: 16px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--surface); display: none; }
+  #status.show { display: block; }
+  #status ul { margin: 6px 0 0; padding-left: 18px; }
+  .err { color: var(--bad); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    display: flex; flex-direction: column; }
+  .card img { width: 100%; aspect-ratio: 1; object-fit: cover; background: var(--border); }
+  .body { padding: 12px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .name { font-weight: 600; text-decoration: none; color: var(--text); }
+  .name:hover { color: var(--accent); }
+  .row { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .chip.mat { color: var(--accent); border-color: var(--accent); }
+  .price { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .price s { color: var(--muted); font-weight: 400; margin-left: 6px; }
+  .sub { color: var(--muted); font-size: 12px; }
+  .instock { color: var(--ok); font-size: 12px; font-weight: 600; }
+  .check { display: flex; align-items: center; gap: 6px; color: var(--muted); }
+  .count { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+  .soldout { color: var(--bad); font-size: 12px; font-weight: 600; }
+  .empty { color: var(--muted); padding: 40px; text-align: center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>iSANMATE Catalog</h1>
+  <span class="meta" id="meta">Loading…</span>
+  <span class="spacer"></span>
+  <input type="search" id="q" placeholder="Search name, color, feature…" aria-label="Search">
+  <select id="material" aria-label="Material"><option value="">All materials</option></select>
+  <label class="check"><input type="checkbox" id="stocked"> In stock only</label>
+  <button id="update">Update data</button>
+</header>
+<main>
+  <div id="status"></div>
+  <div class="count" id="count"></div>
+  <div class="grid" id="grid"></div>
+</main>
+<script>
+  const $ = (id) => document.getElementById(id);
+  let catalog = null;
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const money = (n) => new Intl.NumberFormat(undefined, { style: 'currency', currency: catalog.currency }).format(n);
+
+  const imgSrc = (src) => src ? src + (src.includes('?') ? '&' : '?') + 'width=400' : '';
+
+  function render() {
+    if (!catalog) return;
+    const q = $('q').value.trim().toLowerCase();
+    const mat = $('material').value;
+    const stockedOnly = $('stocked').checked;
+    const items = catalog.products.filter((p) =>
+      (!mat || p.material === mat) &&
+      (!stockedOnly || p.in_stock) &&
+      (!q || [p.name, p.color, p.material, p.sku, ...p.features].join(' ').toLowerCase().includes(q)));
+    $('count').textContent = `Showing ${items.length} of ${catalog.product_count}`;
+    $('grid').innerHTML = items.length ? items.map((p) => `
+      <article class="card">
+        <a href="${esc(p.url)}" target="_blank" rel="noopener"><img loading="lazy" src="${esc(imgSrc(p.image))}" alt=""></a>
+        <div class="body">
+          <a class="name" href="${esc(p.url)}" target="_blank" rel="noopener">${esc(p.name)}</a>
+          <div class="row">
+            ${p.material ? `<span class="chip mat">${esc(p.material)}</span>` : ''}
+            ${p.roll_size ? `<span class="chip">${esc(p.roll_size.label)}</span>` : ''}
+            ${p.diameter ? `<span class="chip">${esc(p.diameter)}</span>` : ''}
+            ${p.features.map((f) => `<span class="chip">${esc(f)}</span>`).join('')}
+          </div>
+          <div class="price">${money(p.price)}${p.compare_at_price > p.price ? `<s>${money(p.compare_at_price)}</s>` : ''}</div>
+          <div class="sub">${p.color ? `Color: ${esc(p.color)}` : ''}${p.sku ? ` · SKU ${esc(p.sku)}` : ''}</div>
+          ${p.in_stock ? '<div class="instock">In stock</div>' : '<div class="soldout">Sold out</div>'}
+        </div>
+      </article>`).join('') : '<div class="empty">No matching products.</div>';
+  }
+
+  function renderMeta() {
+    const when = new Date(catalog.scraped_at).toLocaleString();
+    $('meta').textContent = `${catalog.product_count} products · ${catalog.in_stock_count} in stock · ${catalog.currency} · updated ${when}`;
+    const mats = [...new Set(catalog.products.map((p) => p.material).filter(Boolean))].sort();
+    const current = $('material').value;
+    $('material').innerHTML = '<option value="">All materials</option>' + mats.map((m) => `<option ${m === current ? 'selected' : ''}>${esc(m)}</option>`).join('');
+  }
+
+  async function load() {
+    const res = await fetch('/api/products');
+    if (res.status === 404) { $('meta').textContent = 'No data yet — click Update data.'; return; }
+    catalog = await res.json();
+    renderMeta();
+    render();
+  }
+
+  function showChanges(r) {
+    const c = r.changes;
+    const list = (title, arr, fmt) => arr.length ? `<div><strong>${title} (${arr.length})</strong><ul>${arr.map((x) => `<li>${esc(fmt(x))}</li>`).join('')}</ul></div>` : '';
+    const none = !c.added.length && !c.removed.length && !c.price_changes.length && !c.stock_changes.length;
+    $('status').innerHTML = `<strong>Updated.</strong> ${r.product_count} products, ${r.in_stock_count} in stock.` +
+      (none ? ' No changes since last update.' :
+        list('New products', c.added, (x) => x) +
+        list('Removed products', c.removed, (x) => x) +
+        list('Price changes', c.price_changes, (x) => `${x.product}: ${money(x.from)} → ${money(x.to)}`) +
+        list('Stock changes', c.stock_changes, (x) => `${x.product}: ${x.in_stock ? 'back in stock' : 'sold out'}`));
+    $('status').className = 'show';
+  }
+
+  $('update').addEventListener('click', async () => {
+    const btn = $('update');
+    btn.disabled = true; btn.textContent = 'Updating…';
+    try {
+      const res = await fetch('/api/update', { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error);
+      await load();
+      showChanges(body);
+    } catch (err) {
+      $('status').innerHTML = `<span class="err">Update failed: ${esc(err.message)}</span>`;
+      $('status').className = 'show';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Update data';
+    }
+  });
+  $('q').addEventListener('input', render);
+  $('material').addEventListener('change', render);
+  $('stocked').addEventListener('change', render);
+  load();
+</script>
+</body>
+</html>
