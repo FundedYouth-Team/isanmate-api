@@ -1,6 +1,6 @@
 # iSANMATE Public API
 
-A free, public inventory list of every 3D printing filament [iSANMATE](https://isanmate.store) stocks: prices, colors, materials, stock status, images and links. Built with iSANMATE's permission.
+A free, public inventory list of every 3D printing filament [iSANMATE](https://isanmate.store) stocks: colors, materials, stock status, images and links. Built with iSANMATE's permission.
 
 This is a community-maintained project, not an official iSANMATE API.
 
@@ -32,12 +32,10 @@ curl https://raw.githubusercontent.com/FundedYouth-Team/isanmate-api/main/data/p
 const res = await fetch('https://raw.githubusercontent.com/FundedYouth-Team/isanmate-api/main/data/products.json');
 const { products } = await res.json();
 
-// Every PETG filament that's in stock, cheapest first
-const petg = products
-  .filter((p) => p.material === 'PETG' && p.in_stock)
-  .sort((a, b) => a.price - b.price);
+// Every PETG filament that's in stock
+const petg = products.filter((p) => p.material === 'PETG' && p.in_stock);
 
-petg.forEach((p) => console.log(`${p.name}: $${p.price}`));
+petg.forEach((p) => console.log(`${p.name}: ${p.url}`));
 ```
 
 **Python:**
@@ -50,7 +48,7 @@ products = requests.get(url).json()["products"]
 
 for p in products:
     if p["material"] == "PLA" and p["in_stock"]:
-        print(p["name"], p["price"], p["url"])
+        print(p["name"], p["url"])
 ```
 
 ### Sample response
@@ -60,7 +58,6 @@ This is the real entry for one product, trimmed to a single product. The descrip
 ```json
 {
   "source": "https://isanmate.store",
-  "currency": "USD",
   "scraped_at": "2026-10-18T04:12:31.562Z",
   "product_count": 217,
   "in_stock_count": 217,
@@ -76,8 +73,6 @@ This is the real entry for one product, trimmed to a single product. The descrip
       "features": ["Glow in the Dark"],
       "diameter": "1.75mm",
       "roll_size": { "label": "1kg", "grams_per_spool": 1000, "spools": 1 },
-      "price": 26.99,
-      "compare_at_price": null,
       "in_stock": true,
       "url": "https://isanmate.store/products/pla-glow-in-the-dark-filament-1kg?variant=51116953305405",
       "image": "https://cdn.shopify.com/s/files/1/0841/1004/9597/files/01_2784b536-ef63-45fb-9a29-3ea04ea47f15.jpg?v=1764839002",
@@ -112,7 +107,6 @@ This is the real entry for one product, trimmed to a single product. The descrip
 | Field            | Description                                              |
 | ---------------- | -------------------------------------------------------- |
 | `source`         | The store the data comes from                            |
-| `currency`       | Currency for all prices (always `USD`)                   |
 | `scraped_at`     | When the data was last refreshed (UTC)                   |
 | `product_count`  | Number of products (one per color/option)                |
 | `in_stock_count` | Number of products currently in stock                    |
@@ -132,8 +126,6 @@ This is the real entry for one product, trimmed to a single product. The descrip
 | `features`               | Tags such as `Silk`, `Matte`, `Carbon Fiber`, `High Speed`, `Glow in the Dark`, `Rainbow`, `Bundle` |
 | `diameter`               | Filament diameter, e.g. `"1.75mm"`, or `null` if not stated |
 | `roll_size`              | Spool weight and count, or `null` if the store doesn't state it |
-| `price`                  | Current price in USD |
-| `compare_at_price`       | Original price when on sale, otherwise `null` |
 | `in_stock`               | `true` if it can currently be ordered |
 | `url`                    | Direct link to this color on the store |
 | `image`                  | Main image for this color |
@@ -150,13 +142,13 @@ This is the real entry for one product, trimmed to a single product. The descrip
 Notes:
 
 - `material`, `features`, `diameter`, `roll_size` and some `color` values are worked out from product names and descriptions, because the store doesn't have dedicated fields for them. They are `null` or empty when the store doesn't say. For example, many listings never give a spool weight.
-- Prices change. Always link to `url` for the current price before ordering.
+- The API doesn't include prices. Link to `url` to see the current price on the store.
 
 ## Running it yourself
 
 The rest of this README is for maintainers who refresh the data.
 
-The store runs on Shopify, so the scraper reads Shopify's public storefront JSON (`/products.json`, `/collections/*/products.json`) instead of parsing HTML. Prices are fixed to **USD**, the store's base currency. Otherwise, Shopify returns prices in a currency based on the requester's location.
+The store runs on Shopify, so the scraper reads Shopify's public storefront JSON (`/products.json`, `/collections/*/products.json`) instead of parsing HTML.
 
 It requires Node 18+ and pnpm, and has no dependencies.
 
@@ -166,7 +158,7 @@ pnpm start         # preview the web app at http://localhost:3000
 pnpm build         # assemble the site in dist/ for Cloudflare Pages
 ```
 
-`pnpm update-data` prints a summary of new and removed products, price changes and stock changes. To publish an update, commit and push `data/products.json`. A nightly GitHub Action also does this (see [Hosting](#hosting)).
+`pnpm update-data` prints a summary of new and removed products and stock changes. To publish an update, commit and push `data/products.json`. A nightly GitHub Action also does this (see [Hosting](#hosting)).
 
 The web app shows every product with search, a material filter and an "In stock only" toggle. It serves one endpoint:
 

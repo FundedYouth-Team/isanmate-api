@@ -40,8 +40,6 @@
   .row { display: flex; flex-wrap: wrap; gap: 4px; }
   .chip { font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
   .chip.mat { color: var(--accent); border-color: var(--accent); }
-  .price { font-weight: 600; font-variant-numeric: tabular-nums; }
-  .price s { color: var(--muted); font-weight: 400; margin-left: 6px; }
   .sub { color: var(--muted); font-size: 12px; }
   .instock { color: var(--ok); font-size: 12px; font-weight: 600; }
   .check { display: flex; align-items: center; gap: 6px; color: var(--muted); }
@@ -84,7 +82,6 @@
   let catalog = null;
 
   const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const money = (n) => new Intl.NumberFormat(undefined, { style: 'currency', currency: catalog.currency }).format(n);
 
   const imgSrc = (src) => src ? src + (src.includes('?') ? '&' : '?') + 'width=400' : '';
 
@@ -133,7 +130,6 @@
             ${p.diameter ? `<span class="chip">${esc(p.diameter)}</span>` : ''}
             ${p.features.map((f) => `<span class="chip">${esc(f)}</span>`).join('')}
           </div>
-          <div class="price">${money(p.price)}${p.compare_at_price > p.price ? `<s>${money(p.compare_at_price)}</s>` : ''}</div>
           <div class="sub">${p.color ? `Color: ${esc(p.color)}` : ''}${p.sku ? ` · SKU ${esc(p.sku)}` : ''}</div>
           ${p.in_stock ? '<div class="instock">In stock</div>' : '<div class="soldout">Sold out</div>'}
         </div>
@@ -142,7 +138,7 @@
 
   function renderMeta() {
     const when = new Date(catalog.scraped_at).toLocaleString();
-    $('meta').textContent = `${catalog.product_count} products · ${catalog.in_stock_count} in stock · ${catalog.currency} · updated ${when}`;
+    $('meta').textContent = `${catalog.product_count} products · ${catalog.in_stock_count} in stock · updated ${when}`;
     const mats = [...new Set(catalog.products.map((p) => p.material).filter(Boolean))].sort();
     const current = $('material').value;
     $('material').innerHTML = '<option value="">All materials</option>' + mats.map((m) => `<option ${m === current ? 'selected' : ''}>${esc(m)}</option>`).join('');

@@ -12,10 +12,6 @@ export const DATA_FILE = resolve(dirname(fileURLToPath(import.meta.url)), '../da
 // Hand-written English translations for listings the store only publishes in another
 // language, keyed by Shopify product ID.
 const TRANSLATIONS_FILE = resolve(dirname(DATA_FILE), 'translations.json');
-
-// Shopify Markets geolocates requests and may return prices in a local currency
-// (e.g. HKD). Pin every request to the store's base currency so data is stable.
-export const CURRENCY = 'USD';
 const PAGE_LIMIT = 250; // Shopify's max page size
 const REQUEST_DELAY_MS = 300; // be polite to the store
 const USER_AGENT = 'isanmate-api/1.0 (authorized wholesaler catalog sync)';
@@ -81,7 +77,7 @@ async function fetchAllPages(basePath, key) {
   const items = [];
   for (let page = 1; ; page++) {
     const sep = basePath.includes('?') ? '&' : '?';
-    const query = `limit=${PAGE_LIMIT}&page=${page}&currency=${CURRENCY}`;
+    const query = `limit=${PAGE_LIMIT}&page=${page}`;
     const batch = (await getJson(`${basePath}${sep}${query}`))[key];
     items.push(...batch);
     if (batch.length < PAGE_LIMIT) return items;
@@ -212,8 +208,6 @@ function toInventoryItems(p, collectionsByProduct, original) {
       features: detectFeatures(`${p.title} ${variantTitle ?? ''}`),
       diameter,
       roll_size: (variantTitle && parseWeight(variantTitle)) || listingWeight,
-      price: Number(v.price),
-      compare_at_price: v.compare_at_price ? Number(v.compare_at_price) : null,
       in_stock: v.available,
       url: `${STORE_URL}/products/${p.handle}?variant=${v.id}`,
       image,
@@ -268,7 +262,6 @@ export async function scrapeCatalog({ log = () => {} } = {}) {
   });
   return {
     source: STORE_URL,
-    currency: CURRENCY,
     scraped_at: new Date().toISOString(),
     product_count: products.length,
     in_stock_count: products.filter((p) => p.in_stock).length,
@@ -292,15 +285,13 @@ export function diffCatalogs(prev, next) {
   const after = new Map(next.products.map((p) => [p.id, p]));
   const added = next.products.filter((p) => !before.has(p.id)).map((p) => p.name);
   const removed = [...before.values()].filter((p) => !after.has(p.id)).map((p) => p.name);
-  const priceChanges = [];
   const stockChanges = [];
   for (const p of next.products) {
     const old = before.get(p.id);
     if (!old) continue;
-    if (old.price !== p.price) priceChanges.push({ product: p.name, from: old.price, to: p.price });
     if (old.in_stock !== p.in_stock) stockChanges.push({ product: p.name, in_stock: p.in_stock });
   }
-  return { added, removed, price_changes: priceChanges, stock_changes: stockChanges };
+  return { added, removed, stock_changes: stockChanges };
 }
 
 export async function updateCatalog({ log = () => {} } = {}) {
@@ -325,6 +316,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   );
   console.log(
     `Changes: +${changes.added.length} / -${changes.removed.length} products, ` +
-      `${changes.price_changes.length} price changes, ${changes.stock_changes.length} stock changes`,
+      `${changes.stock_changes.length} stock changes`,
   );
 }

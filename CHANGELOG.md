@@ -18,6 +18,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Removed
 
+- **Breaking:** Prices. Products no longer have `price` or `compare_at_price`, the catalog no longer has `currency`, and the update summary no longer reports price changes. The web app no longer shows prices. Link to each product's `url` for the current price.
 - The web app's **Update data** button and the `POST /api/update` endpoint, so visitors can't trigger scrapes. Run `pnpm update-data` instead.
 
 - Rewrote the README for API users. It now covers the public endpoint URL; examples in curl, JavaScript and Python; a real sample response; and a reference for every field. Maintainer instructions moved to a "Running it yourself" section.
